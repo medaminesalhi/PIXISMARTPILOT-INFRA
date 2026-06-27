@@ -1,0 +1,7 @@
+---
+- name: Install Nexus Repository Manager
+  hosts: nexus
+  gather_facts: true
+
+  roles:
+    - nexus

@@ -1,0 +1,18 @@
+---
+nexus_user: "nexus"
+nexus_group: "nexus"
+
+nexus_install_parent_dir: "/opt"
+nexus_app_link: "/opt/nexus"
+nexus_data_dir: "/opt/sonatype-work/nexus3"
+
+nexus_version: "3.77.2-02"
+nexus_download_url: "https://download.sonatype.com/nexus/3/nexus-{{ nexus_version }}-unix.tar.gz"
+nexus_archive_path: "/tmp/nexus-{{ nexus_version }}-unix.tar.gz"
+
+nexus_http_port: 8081
+nexus_http_host: "0.0.0.0"
+
+nexus_java_package: "openjdk-17-jre-headless"
+
+nexus_initial_admin_password_file: "{{ nexus_data_dir }}/admin.password"

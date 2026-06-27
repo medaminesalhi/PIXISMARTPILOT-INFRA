@@ -1,0 +1,166 @@
+---
+- name: Install Java and required packages
+  ansible.builtin.apt:
+    name:
+      - "{{ nexus_java_package }}"
+      - curl
+      - tar
+      - gzip
+    state: present
+    update_cache: true
+  become: true
+
+- name: Ensure Nexus group exists
+  ansible.builtin.group:
+    name: "{{ nexus_group }}"
+    state: present
+  become: true
+
+- name: Ensure Nexus user exists
+  ansible.builtin.user:
+    name: "{{ nexus_user }}"
+    group: "{{ nexus_group }}"
+    shell: /bin/bash
+    home: "{{ nexus_data_dir }}"
+    create_home: false
+    system: true
+  become: true
+
+- name: Check if Nexus is already installed
+  ansible.builtin.stat:
+    path: "{{ nexus_app_link }}/bin/nexus"
+  register: nexus_binary
+  become: true
+
+- name: Download Nexus archive
+  ansible.builtin.get_url:
+    url: "{{ nexus_download_url }}"
+    dest: "{{ nexus_archive_path }}"
+    mode: "0644"
+  when: not nexus_binary.stat.exists
+  become: true
+
+- name: Extract Nexus archive
+  ansible.builtin.unarchive:
+    src: "{{ nexus_archive_path }}"
+    dest: "{{ nexus_install_parent_dir }}"
+    remote_src: true
+  when: not nexus_binary.stat.exists
+  become: true
+
+- name: Find extracted Nexus directory
+  ansible.builtin.find:
+    paths: "{{ nexus_install_parent_dir }}"
+    patterns: "nexus-*"
+    file_type: directory
+  register: nexus_extracted_dirs
+  when: not nexus_binary.stat.exists
+  become: true
+
+- name: Create stable Nexus symlink
+  ansible.builtin.file:
+    src: "{{ (nexus_extracted_dirs.files | sort(attribute='path') | last).path }}"
+    dest: "{{ nexus_app_link }}"
+    state: link
+    force: true
+  when: not nexus_binary.stat.exists
+  become: true
+
+- name: Ensure Nexus data directory exists
+  ansible.builtin.file:
+    path: "{{ nexus_data_dir }}"
+    state: directory
+    owner: "{{ nexus_user }}"
+    group: "{{ nexus_group }}"
+    mode: "0755"
+  become: true
+
+- name: Ensure Nexus etc directory exists
+  ansible.builtin.file:
+    path: "{{ nexus_data_dir }}/etc"
+    state: directory
+    owner: "{{ nexus_user }}"
+    group: "{{ nexus_group }}"
+    mode: "0755"
+  become: true
+
+- name: Configure Nexus HTTP port
+  ansible.builtin.copy:
+    dest: "{{ nexus_data_dir }}/etc/nexus.properties"
+    content: |
+      application-port={{ nexus_http_port }}
+      application-host={{ nexus_http_host }}
+    owner: "{{ nexus_user }}"
+    group: "{{ nexus_group }}"
+    mode: "0644"
+  notify: Restart nexus
+  become: true
+
+- name: Configure Nexus run user
+  ansible.builtin.copy:
+    dest: "{{ nexus_app_link }}/bin/nexus.rc"
+    content: |
+      run_as_user="{{ nexus_user }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart nexus
+  become: true
+
+- name: Set ownership on Nexus application directory
+  ansible.builtin.file:
+    path: "{{ nexus_app_link }}"
+    owner: "{{ nexus_user }}"
+    group: "{{ nexus_group }}"
+    recurse: false
+  become: true
+
+- name: Set ownership on Nexus data directory
+  ansible.builtin.file:
+    path: "{{ nexus_data_dir }}"
+    owner: "{{ nexus_user }}"
+    group: "{{ nexus_group }}"
+    recurse: true
+  become: true
+
+- name: Deploy Nexus systemd service
+  ansible.builtin.template:
+    src: nexus.service.j2
+    dest: /etc/systemd/system/nexus.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart nexus
+  become: true
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  become: true
+
+- name: Ensure Nexus is enabled and started
+  ansible.builtin.systemd:
+    name: nexus
+    state: started
+    enabled: true
+  become: true
+
+- name: Wait for Nexus HTTP port
+  ansible.builtin.wait_for:
+    host: "127.0.0.1"
+    port: "{{ nexus_http_port }}"
+    delay: 20
+    timeout: 300
+
+- name: Test Nexus HTTP endpoint
+  ansible.builtin.command: curl -I http://127.0.0.1:{{ nexus_http_port }}
+  register: nexus_http_test
+  changed_when: false
+
+- name: Display Nexus HTTP test result
+  ansible.builtin.debug:
+    var: nexus_http_test.stdout_lines
+
+- name: Show initial admin password command
+  ansible.builtin.debug:
+    msg: "Pour récupérer le mot de passe admin initial: sudo cat {{ nexus_initial_admin_password_file }}"
