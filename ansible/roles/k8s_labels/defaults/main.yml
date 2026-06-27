@@ -1,0 +1,6 @@
+---
+kubernetes_worker_nodes:
+  - k8s-worker-01
+  - k8s-worker-02
+
+kubernetes_worker_role_label: "node-role.kubernetes.io/worker"

@@ -1,0 +1,4 @@
+---
+nfs_server_ip: "172.16.0.30"
+nfs_export_path: "/srv/nfs/k8s"
+nfs_test_mount_path: "/mnt/nfs-test"

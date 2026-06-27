@@ -1,0 +1,12 @@
+---
+kubernetes_repo_version: "v1.29"
+
+kubernetes_packages:
+  - kubelet
+  - kubeadm
+  - kubectl
+
+kubernetes_apt_keyring: "/etc/apt/keyrings/kubernetes-apt-keyring.gpg"
+kubernetes_apt_repo: "https://pkgs.k8s.io/core:/stable:/{{ kubernetes_repo_version }}/deb/"
+
+containerd_config_file: "/etc/containerd/config.toml"

@@ -1,0 +1,29 @@
+proxmox_endpoint = "https://100.64.79.100:8006/"
+
+proxmox_api_token = "root@pam!terraform=REPLACE_WITH_REAL_TOKEN"
+
+proxmox_insecure = true
+
+proxmox_node = "pve"
+
+template_vm_id = 9000
+
+lxc_template_file_id = "local:vztmpl/debian-12-standard_12.12-1_amd64.tar.zst"
+
+datastore_id = "local-lvm"
+
+network_bridge = "vmbr1"
+
+gateway = "172.16.0.1"
+
+dns_servers = ["1.1.1.1", "8.8.8.8"]
+
+admin_user = "user"
+
+admin_password = "CHANGE_ME_TEMP_PASSWORD"
+
+ssh_public_key_path = "C:/Users/Lenovo/.ssh/pixismartpilot_ed25519.pub"
+
+start_after_create = true
+
+protection = false

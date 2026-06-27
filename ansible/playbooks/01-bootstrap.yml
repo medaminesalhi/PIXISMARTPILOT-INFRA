@@ -1,0 +1,7 @@
+---
+- name: Bootstrap all servers with common baseline
+  hosts: all
+  gather_facts: true
+
+  roles:
+    - common

@@ -1,0 +1,39 @@
+---
+- name: Install NFS client package
+  ansible.builtin.apt:
+    name: nfs-common
+    state: present
+    update_cache: true
+  become: true
+
+- name: Create temporary NFS test mount directory
+  ansible.builtin.file:
+    path: "{{ nfs_test_mount_path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  become: true
+
+- name: Test mount NFS share
+  ansible.builtin.command: >
+    mount -t nfs {{ nfs_server_ip }}:{{ nfs_export_path }} {{ nfs_test_mount_path }}
+  register: nfs_mount_test
+  changed_when: false
+  failed_when:
+    - nfs_mount_test.rc != 0
+    - "'already mounted' not in nfs_mount_test.stderr"
+  become: true
+
+- name: Create test file on NFS share
+  ansible.builtin.copy:
+    dest: "{{ nfs_test_mount_path }}/test-from-{{ inventory_hostname }}.txt"
+    content: "NFS test from {{ inventory_hostname }}\n"
+    mode: "0644"
+  become: true
+
+- name: Unmount temporary NFS test mount
+  ansible.builtin.command: umount {{ nfs_test_mount_path }}
+  changed_when: false
+  failed_when: false
+  become: true

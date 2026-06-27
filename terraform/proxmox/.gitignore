@@ -1,0 +1,30 @@
+# Terraform cache
+.terraform/
+
+# Terraform state - sensitive
+*.tfstate
+*.tfstate.*
+
+# Terraform variables - may contain secrets
+*.tfvars
+!terraform.tfvars.example
+
+# Terraform plans
+*.tfplan
+plan.out
+
+# Logs
+crash.log
+crash.*.log
+
+# Overrides
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

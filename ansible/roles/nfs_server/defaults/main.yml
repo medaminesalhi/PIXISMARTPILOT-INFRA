@@ -1,0 +1,5 @@
+---
+nfs_export_path: "/srv/nfs/k8s"
+nfs_allowed_network: "172.16.0.0/24"
+
+nfs_export_options: "rw,sync,no_subtree_check,no_root_squash"

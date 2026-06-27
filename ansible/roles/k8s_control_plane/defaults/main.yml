@@ -1,0 +1,8 @@
+---
+kubernetes_pod_network_cidr: "192.168.0.0/16"
+kubernetes_apiserver_advertise_address: "172.16.0.11"
+kubernetes_control_plane_endpoint: "172.16.0.11"
+
+# Lab only: because current master has 1 CPU.
+# Better practice: set k8s-master-01 to 2 CPU in Proxmox/Terraform.
+kubeadm_ignore_preflight_errors: "NumCPU"

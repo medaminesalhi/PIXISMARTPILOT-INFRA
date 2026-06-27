@@ -1,0 +1,17 @@
+---
+- name: Test Ansible connectivity
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Ping all hosts
+      ansible.builtin.ping:
+
+    - name: Check current remote user
+      ansible.builtin.command: whoami
+      changed_when: false
+
+    - name: Check sudo access
+      ansible.builtin.command: whoami
+      become: true
+      changed_when: false

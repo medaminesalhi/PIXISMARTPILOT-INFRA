@@ -1,0 +1,7 @@
+---
+- name: Install NFS dynamic provisioner
+  hosts: k8s_control_plane
+  gather_facts: false
+
+  roles:
+    - nfs_provisioner

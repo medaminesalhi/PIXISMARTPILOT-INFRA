@@ -1,0 +1,3 @@
+---
+kubernetes_join_command_dir: "{{ playbook_dir }}/../cluster_artifacts"
+kubernetes_join_command_file: "{{ kubernetes_join_command_dir }}/join-command.txt"

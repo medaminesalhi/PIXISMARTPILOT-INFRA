@@ -1,0 +1,27 @@
+---
+- name: Check if worker already joined the cluster
+  ansible.builtin.stat:
+    path: /etc/kubernetes/kubelet.conf
+  register: kubelet_conf
+  become: true
+
+- name: Ensure join command exists when worker needs to join
+  ansible.builtin.assert:
+    that:
+      - kubeadm_join_command is defined
+      - kubeadm_join_command | length > 0
+    fail_msg: "Worker is not joined and no kubeadm join command is available."
+    success_msg: "Join command is available."
+  when: not kubelet_conf.stat.exists
+
+- name: Join worker node to Kubernetes cluster
+  ansible.builtin.command: "{{ kubeadm_join_command }}"
+  when: not kubelet_conf.stat.exists
+  become: true
+
+- name: Ensure kubelet is enabled and running
+  ansible.builtin.service:
+    name: kubelet
+    state: started
+    enabled: true
+  become: true

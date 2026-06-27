@@ -1,0 +1,81 @@
+---
+- name: Check Kubernetes nodes before Calico
+  ansible.builtin.command: kubectl get nodes -o wide
+  environment:
+    KUBECONFIG: "/home/{{ admin_user }}/.kube/config"
+  register: nodes_before_calico
+  changed_when: false
+  become: true
+  become_user: "{{ admin_user }}"
+
+- name: Display Kubernetes nodes before Calico
+  ansible.builtin.debug:
+    var: nodes_before_calico.stdout_lines
+
+- name: Remove previous broken Calico install if recovery is enabled
+  ansible.builtin.command: kubectl delete -f /tmp/calico.yaml --ignore-not-found=true
+  environment:
+    KUBECONFIG: "/home/{{ admin_user }}/.kube/config"
+  when: calico_recover_broken_install | bool
+  register: calico_cleanup
+  changed_when: "'deleted' in calico_cleanup.stdout"
+  failed_when: false
+  become: true
+  become_user: "{{ admin_user }}"
+
+- name: Download desired Calico manifest
+  ansible.builtin.get_url:
+    url: "{{ calico_manifest_url }}"
+    dest: "{{ calico_manifest_path }}"
+    mode: "0644"
+    force: true
+  become: true
+
+- name: Apply Calico manifest
+  ansible.builtin.command: kubectl apply -f {{ calico_manifest_path }}
+  environment:
+    KUBECONFIG: "/home/{{ admin_user }}/.kube/config"
+  register: calico_apply
+  changed_when: >
+    'created' in calico_apply.stdout or
+    'configured' in calico_apply.stdout
+  become: true
+  become_user: "{{ admin_user }}"
+
+- name: Show Calico apply result
+  ansible.builtin.debug:
+    var: calico_apply.stdout_lines
+
+- name: Wait for Calico daemonset to be available
+  ansible.builtin.command: kubectl rollout status daemonset/calico-node -n {{ calico_namespace }} --timeout=300s
+  environment:
+    KUBECONFIG: "/home/{{ admin_user }}/.kube/config"
+  changed_when: false
+  become: true
+  become_user: "{{ admin_user }}"
+
+- name: Show Kubernetes nodes after Calico
+  ansible.builtin.command: kubectl get nodes -o wide
+  environment:
+    KUBECONFIG: "/home/{{ admin_user }}/.kube/config"
+  register: nodes_after_calico
+  changed_when: false
+  become: true
+  become_user: "{{ admin_user }}"
+
+- name: Display Kubernetes nodes after Calico
+  ansible.builtin.debug:
+    var: nodes_after_calico.stdout_lines
+
+- name: Show kube-system pods
+  ansible.builtin.command: kubectl get pods -n kube-system -o wide
+  environment:
+    KUBECONFIG: "/home/{{ admin_user }}/.kube/config"
+  register: kube_system_pods
+  changed_when: false
+  become: true
+  become_user: "{{ admin_user }}"
+
+- name: Display kube-system pods
+  ansible.builtin.debug:
+    var: kube_system_pods.stdout_lines

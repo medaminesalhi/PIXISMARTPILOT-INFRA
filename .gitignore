@@ -1,0 +1,36 @@
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!terraform.tfvars.example
+*.tfplan
+plan.out
+
+# Ansible
+*.retry
+cluster_artifacts/
+*.log
+
+# Kubernetes secrets/configs
+admin.conf
+kubeconfig
+*.kubeconfig
+
+# SSH/private keys
+*.pem
+*.key
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+github_ed25519
+github_ed25519.pub
+pixismartpilot_ed25519
+pixismartpilot_ed25519.pub
+
+# OS/editors
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,44 @@
+---
+- name: Update APT cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+  become: true
+
+- name: Install common packages
+  ansible.builtin.apt:
+    name: "{{ common_packages }}"
+    state: present
+  become: true
+
+- name: Ensure sudo without password for admin user
+  ansible.builtin.copy:
+    dest: "/etc/sudoers.d/90-{{ admin_user }}"
+    content: "{{ admin_user }} ALL=(ALL) NOPASSWD:ALL\n"
+    owner: root
+    group: root
+    mode: "0440"
+    validate: "visudo -cf %s"
+  become: true
+
+- name: Configure internal hosts resolution
+  ansible.builtin.blockinfile:
+    path: /etc/hosts
+    marker: "# {mark} ANSIBLE MANAGED PIXISMARTPILOT HOSTS"
+    block: |
+      {% for node in cluster_hosts %}
+      {{ node.ip }} {{ node.name }}
+      {% endfor %}
+  become: true
+
+- name: Set server timezone
+  ansible.builtin.timezone:
+    name: "{{ timezone }}"
+  become: true
+
+- name: Ensure chrony is enabled and running
+  ansible.builtin.service:
+    name: chrony
+    state: started
+    enabled: true
+  become: true

@@ -1,0 +1,47 @@
+---
+- name: Check if Kubernetes control-plane is already initialized
+  ansible.builtin.stat:
+    path: /etc/kubernetes/admin.conf
+  register: kubeadm_admin_conf
+  become: true
+
+- name: Initialize Kubernetes control-plane
+  ansible.builtin.command: >
+    kubeadm init
+    --pod-network-cidr={{ kubernetes_pod_network_cidr }}
+    --apiserver-advertise-address={{ kubernetes_apiserver_advertise_address }}
+    --ignore-preflight-errors={{ kubeadm_ignore_preflight_errors }}
+  when: not kubeadm_admin_conf.stat.exists
+  become: true
+
+- name: Ensure kubeconfig directory exists for admin user
+  ansible.builtin.file:
+    path: "/home/{{ admin_user }}/.kube"
+    state: directory
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0755"
+  become: true
+
+- name: Copy Kubernetes admin kubeconfig for admin user
+  ansible.builtin.copy:
+    src: /etc/kubernetes/admin.conf
+    dest: "/home/{{ admin_user }}/.kube/config"
+    remote_src: true
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0600"
+  become: true
+
+- name: Check Kubernetes nodes from control-plane
+  ansible.builtin.command: kubectl get nodes
+  environment:
+    KUBECONFIG: "/home/{{ admin_user }}/.kube/config"
+  register: kubectl_nodes
+  changed_when: false
+  become: true
+  become_user: "{{ admin_user }}"
+
+- name: Show Kubernetes nodes output
+  ansible.builtin.debug:
+    var: kubectl_nodes.stdout_lines

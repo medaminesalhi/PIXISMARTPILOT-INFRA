@@ -1,0 +1,30 @@
+---
+- name: Label Kubernetes worker nodes
+  ansible.builtin.command: >
+    kubectl label node {{ item }}
+    {{ kubernetes_worker_role_label }}=worker
+    --overwrite
+  loop: "{{ kubernetes_worker_nodes }}"
+  environment:
+    KUBECONFIG: "/home/{{ admin_user }}/.kube/config"
+  changed_when: "'not labeled' not in label_worker_result.stdout"
+  register: label_worker_result
+  become: true
+  become_user: "{{ admin_user }}"
+
+- name: Show node labels result
+  ansible.builtin.debug:
+    var: label_worker_result.results
+
+- name: Show Kubernetes nodes with roles
+  ansible.builtin.command: kubectl get nodes
+  environment:
+    KUBECONFIG: "/home/{{ admin_user }}/.kube/config"
+  register: nodes_after_labels
+  changed_when: false
+  become: true
+  become_user: "{{ admin_user }}"
+
+- name: Display Kubernetes nodes
+  ansible.builtin.debug:
+    var: nodes_after_labels.stdout_lines

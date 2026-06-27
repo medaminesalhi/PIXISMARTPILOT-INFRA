@@ -1,0 +1,70 @@
+---
+- name: Ensure NFS provisioner namespace exists
+  ansible.builtin.command: kubectl create namespace {{ nfs_provisioner_namespace }}
+  environment:
+    KUBECONFIG: "/home/{{ admin_user }}/.kube/config"
+  register: namespace_create
+  changed_when: "'created' in namespace_create.stdout"
+  failed_when:
+    - namespace_create.rc != 0
+    - "'AlreadyExists' not in namespace_create.stderr"
+  become: true
+  become_user: "{{ admin_user }}"
+
+- name: Add NFS provisioner Helm repository
+  ansible.builtin.command: >
+    helm repo add {{ nfs_provisioner_repo_name }} {{ nfs_provisioner_repo_url }}
+  register: helm_repo_add
+  changed_when: "'has been added' in helm_repo_add.stdout"
+  failed_when:
+    - helm_repo_add.rc != 0
+    - "'already exists' not in helm_repo_add.stderr"
+
+- name: Update Helm repositories
+  ansible.builtin.command: helm repo update
+  changed_when: false
+
+- name: Install or upgrade NFS subdir external provisioner
+  ansible.builtin.command: >
+    helm upgrade --install {{ nfs_provisioner_release_name }} {{ nfs_provisioner_chart }}
+    --namespace {{ nfs_provisioner_namespace }}
+    --set nfs.server={{ nfs_server_ip }}
+    --set nfs.path={{ nfs_export_path }}
+    --set storageClass.name={{ nfs_storage_class_name }}
+    --set storageClass.defaultClass={{ nfs_storage_class_default }}
+  environment:
+    KUBECONFIG: "/home/{{ admin_user }}/.kube/config"
+  register: nfs_provisioner_install
+  changed_when: >
+    'deployed' in nfs_provisioner_install.stdout or
+    'upgraded' in nfs_provisioner_install.stdout
+  become: true
+  become_user: "{{ admin_user }}"
+
+- name: Display NFS provisioner install result
+  ansible.builtin.debug:
+    var: nfs_provisioner_install.stdout_lines
+
+- name: Wait for NFS provisioner deployment
+  ansible.builtin.command: >
+    kubectl rollout status deployment/{{ nfs_provisioner_release_name }}
+    -n {{ nfs_provisioner_namespace }}
+    --timeout=180s
+  environment:
+    KUBECONFIG: "/home/{{ admin_user }}/.kube/config"
+  changed_when: false
+  become: true
+  become_user: "{{ admin_user }}"
+
+- name: Show Kubernetes storage classes
+  ansible.builtin.command: kubectl get storageclass
+  environment:
+    KUBECONFIG: "/home/{{ admin_user }}/.kube/config"
+  register: storage_classes
+  changed_when: false
+  become: true
+  become_user: "{{ admin_user }}"
+
+- name: Display storage classes
+  ansible.builtin.debug:
+    var: storage_classes.stdout_lines
