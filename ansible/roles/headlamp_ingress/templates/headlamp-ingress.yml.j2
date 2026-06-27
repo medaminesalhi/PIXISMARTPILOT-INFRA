@@ -1,0 +1,19 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ headlamp_ingress_name }}
+  namespace: {{ headlamp_namespace }}
+spec:
+  ingressClassName: {{ headlamp_ingress_class }}
+  rules:
+    - host: {{ headlamp_ingress_host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ headlamp_service_name }}
+                port:
+                  number: {{ headlamp_service_port }}

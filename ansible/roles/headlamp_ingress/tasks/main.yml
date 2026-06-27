@@ -1,0 +1,46 @@
+---
+- name: Check Headlamp service exists
+  ansible.builtin.command: kubectl get svc {{ headlamp_service_name }} -n {{ headlamp_namespace }}
+  environment:
+    KUBECONFIG: "/home/{{ admin_user }}/.kube/config"
+  register: headlamp_service_check
+  changed_when: false
+  become: true
+  become_user: "{{ admin_user }}"
+
+- name: Render Headlamp Ingress manifest
+  ansible.builtin.template:
+    src: headlamp-ingress.yml.j2
+    dest: "{{ headlamp_ingress_manifest_path }}"
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0644"
+  become: true
+
+- name: Apply Headlamp Ingress
+  ansible.builtin.command: kubectl apply -f {{ headlamp_ingress_manifest_path }}
+  environment:
+    KUBECONFIG: "/home/{{ admin_user }}/.kube/config"
+  register: headlamp_ingress_apply
+  changed_when: >
+    'created' in headlamp_ingress_apply.stdout or
+    'configured' in headlamp_ingress_apply.stdout
+  become: true
+  become_user: "{{ admin_user }}"
+
+- name: Show Headlamp Ingress apply result
+  ansible.builtin.debug:
+    var: headlamp_ingress_apply.stdout_lines
+
+- name: Show Headlamp Ingress
+  ansible.builtin.command: kubectl get ingress -n {{ headlamp_namespace }} -o wide
+  environment:
+    KUBECONFIG: "/home/{{ admin_user }}/.kube/config"
+  register: headlamp_ingress_info
+  changed_when: false
+  become: true
+  become_user: "{{ admin_user }}"
+
+- name: Display Headlamp Ingress
+  ansible.builtin.debug:
+    var: headlamp_ingress_info.stdout_lines

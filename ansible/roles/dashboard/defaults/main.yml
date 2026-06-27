@@ -1,0 +1,10 @@
+---
+headlamp_namespace: "headlamp"
+
+headlamp_release_name: "headlamp"
+headlamp_repo_name: "headlamp"
+headlamp_repo_url: "https://kubernetes-sigs.github.io/headlamp/"
+headlamp_chart: "headlamp/headlamp"
+
+headlamp_admin_user: "headlamp-admin"
+headlamp_admin_manifest_path: "/tmp/headlamp-admin-user.yml"

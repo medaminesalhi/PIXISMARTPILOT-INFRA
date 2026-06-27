@@ -1,0 +1,11 @@
+---
+headlamp_namespace: "headlamp"
+
+headlamp_ingress_name: "headlamp-ingress"
+headlamp_ingress_host: "headlamp.pixismart.local"
+headlamp_ingress_class: "nginx"
+
+headlamp_service_name: "headlamp"
+headlamp_service_port: 80
+
+headlamp_ingress_manifest_path: "/home/{{ admin_user }}/.kube/headlamp-ingress.yml"

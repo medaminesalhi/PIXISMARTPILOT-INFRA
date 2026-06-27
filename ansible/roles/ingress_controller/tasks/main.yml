@@ -1,0 +1,63 @@
+---
+- name: Check Helm is installed
+  ansible.builtin.command: helm version --short
+  register: helm_check
+  changed_when: false
+
+- name: Add ingress-nginx Helm repository
+  ansible.builtin.command: >
+    helm repo add {{ ingress_repo_name }} {{ ingress_repo_url }}
+  register: ingress_repo_add
+  changed_when: "'has been added' in ingress_repo_add.stdout"
+  failed_when:
+    - ingress_repo_add.rc != 0
+    - "'already exists' not in ingress_repo_add.stderr"
+
+- name: Update Helm repositories
+  ansible.builtin.command: helm repo update
+  changed_when: false
+
+- name: Install or upgrade ingress-nginx controller
+  ansible.builtin.command: >
+    helm upgrade --install {{ ingress_release_name }} {{ ingress_chart }}
+    --namespace {{ ingress_namespace }}
+    --create-namespace
+    --set controller.service.type=NodePort
+    --set controller.service.nodePorts.http={{ ingress_http_nodeport }}
+    --set controller.service.nodePorts.https={{ ingress_https_nodeport }}
+  environment:
+    KUBECONFIG: "/home/{{ admin_user }}/.kube/config"
+  register: ingress_install
+  changed_when: >
+    'has been upgraded' in ingress_install.stdout or
+    'has been installed' in ingress_install.stdout
+  become: true
+  become_user: "{{ admin_user }}"
+
+- name: Show ingress-nginx install result
+  ansible.builtin.debug:
+    var: ingress_install.stdout_lines
+
+- name: Wait for ingress-nginx controller
+  ansible.builtin.command: >
+    kubectl rollout status deployment/{{ ingress_release_name }}-controller
+    -n {{ ingress_namespace }}
+    --timeout=300s
+  environment:
+    KUBECONFIG: "/home/{{ admin_user }}/.kube/config"
+  changed_when: false
+  become: true
+  become_user: "{{ admin_user }}"
+
+- name: Show ingress-nginx service
+  ansible.builtin.command: kubectl get svc -n {{ ingress_namespace }} -o wide
+  environment:
+    KUBECONFIG: "/home/{{ admin_user }}/.kube/config"
+  register: ingress_services
+  changed_when: false
+  become: true
+  become_user: "{{ admin_user }}"
+
+- name: Display ingress-nginx services
+  ansible.builtin.debug:
+    var: ingress_services.stdout_lines

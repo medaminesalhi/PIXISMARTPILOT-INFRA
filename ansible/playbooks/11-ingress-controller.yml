@@ -1,0 +1,7 @@
+---
+- name: Install Kubernetes Ingress Controller
+  hosts: k8s_control_plane
+  gather_facts: false
+
+  roles:
+    - ingress_controller

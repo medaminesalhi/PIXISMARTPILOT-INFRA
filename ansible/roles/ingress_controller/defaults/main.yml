@@ -1,0 +1,10 @@
+---
+ingress_namespace: "ingress-nginx"
+
+ingress_release_name: "ingress-nginx"
+ingress_repo_name: "ingress-nginx"
+ingress_repo_url: "https://kubernetes.github.io/ingress-nginx"
+ingress_chart: "ingress-nginx/ingress-nginx"
+
+ingress_http_nodeport: 30080
+ingress_https_nodeport: 30443

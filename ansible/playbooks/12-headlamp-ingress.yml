@@ -1,0 +1,7 @@
+---
+- name: Create Headlamp Ingress rule
+  hosts: k8s_control_plane
+  gather_facts: false
+
+  roles:
+    - headlamp_ingress
