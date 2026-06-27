@@ -1,0 +1,19 @@
+---
+haproxy_frontend_http_port: 80
+
+haproxy_backend_name: "kubernetes_ingress_http"
+
+haproxy_ingress_backends:
+  - name: "k8s-worker-01"
+    ip: "172.16.0.12"
+    port: 30080
+  - name: "k8s-worker-02"
+    ip: "172.16.0.13"
+    port: 30080
+
+haproxy_stats_enabled: true
+haproxy_stats_bind_address: "127.0.0.1"
+haproxy_stats_port: 8404
+haproxy_stats_uri: "/stats"
+haproxy_stats_user: "admin"
+haproxy_stats_password: "123456789"

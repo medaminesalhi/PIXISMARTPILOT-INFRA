@@ -1,0 +1,7 @@
+---
+- name: Configure HAProxy as entrypoint to Kubernetes Ingress
+  hosts: loadbalancer
+  gather_facts: true
+
+  roles:
+    - haproxy

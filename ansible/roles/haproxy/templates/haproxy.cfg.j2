@@ -1,0 +1,37 @@
+global
+    log /dev/log local0
+    log /dev/log local1 notice
+    daemon
+    maxconn 2048
+
+defaults
+    log global
+    mode http
+    option httplog
+    option dontlognull
+    timeout connect 5s
+    timeout client 50s
+    timeout server 50s
+
+frontend http_front
+    bind *:{{ haproxy_frontend_http_port }}
+    mode http
+    default_backend {{ haproxy_backend_name }}
+
+backend {{ haproxy_backend_name }}
+    mode http
+    balance roundrobin
+{% for backend in haproxy_ingress_backends %}
+    server {{ backend.name }} {{ backend.ip }}:{{ backend.port }} check
+{% endfor %}
+
+{% if haproxy_stats_enabled %}
+listen haproxy_stats
+    bind {{ haproxy_stats_bind_address }}:{{ haproxy_stats_port }}
+    mode http
+    stats enable
+    stats uri {{ haproxy_stats_uri }}
+    stats refresh 10s
+    stats show-legends
+    stats auth {{ haproxy_stats_user }}:{{ haproxy_stats_password }}
+{% endif %}
