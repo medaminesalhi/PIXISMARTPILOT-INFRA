@@ -1,0 +1,6 @@
+---
+- name: Install ArgoCD on Kubernetes cluster
+  hosts: k8s_control_plane
+  become: false
+  roles:
+    - argocd

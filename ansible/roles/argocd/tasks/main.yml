@@ -1,0 +1,64 @@
+---
+- name: Check kubectl access
+  ansible.builtin.command: kubectl get nodes
+  register: argocd_kubectl_check
+  changed_when: false
+
+- name: Show Kubernetes nodes
+  ansible.builtin.debug:
+    var: argocd_kubectl_check.stdout_lines
+
+- name: Create ArgoCD namespace
+  ansible.builtin.command: kubectl create namespace {{ argocd_namespace }}
+  register: argocd_namespace_create
+  changed_when: "'created' in argocd_namespace_create.stdout"
+  failed_when:
+    - argocd_namespace_create.rc != 0
+    - "'AlreadyExists' not in argocd_namespace_create.stderr"
+
+- name: Install ArgoCD official manifests with server-side apply
+  ansible.builtin.command: >
+    kubectl apply --server-side --force-conflicts
+    -n {{ argocd_namespace }}
+    -f {{ argocd_install_manifest_url }}
+  register: argocd_install
+  changed_when: >
+    'created' in argocd_install.stdout or
+    'configured' in argocd_install.stdout or
+    'serverside-applied' in argocd_install.stdout
+
+- name: Wait for ArgoCD pods to be Ready
+  ansible.builtin.command: >
+    kubectl wait --for=condition=Ready pods --all
+    -n {{ argocd_namespace }}
+    --timeout={{ argocd_wait_timeout }}s
+  register: argocd_wait
+  changed_when: false
+
+- name: Get ArgoCD pods
+  ansible.builtin.command: kubectl get pods -n {{ argocd_namespace }}
+  register: argocd_pods
+  changed_when: false
+
+- name: Show ArgoCD pods
+  ansible.builtin.debug:
+    var: argocd_pods.stdout_lines
+
+- name: Get ArgoCD services
+  ansible.builtin.command: kubectl get svc -n {{ argocd_namespace }}
+  register: argocd_services
+  changed_when: false
+
+- name: Show ArgoCD services
+  ansible.builtin.debug:
+    var: argocd_services.stdout_lines
+
+- name: Show next manual commands
+  ansible.builtin.debug:
+    msg:
+      - "ArgoCD installation finished."
+      - "To get admin password:"
+      - "kubectl -n {{ argocd_namespace }} get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d; echo"
+      - "To open UI from WSL:"
+      - "ssh -L {{ argocd_local_port }}:127.0.0.1:{{ argocd_local_port }} k8s-master-01 \"kubectl port-forward svc/{{ argocd_service_name }} -n {{ argocd_namespace }} {{ argocd_local_port }}:443\""
+      - "Then open: https://localhost:{{ argocd_local_port }}"
