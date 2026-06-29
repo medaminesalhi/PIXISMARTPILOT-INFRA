@@ -1,0 +1,257 @@
+---
+# ============================================================
+# PIXISMARTPILOT-INFRA - Main Ansible Site Playbook
+# ============================================================
+# Objectif :
+# 1. Préparer toutes les machines
+# 2. Installer Kubernetes
+# 3. Installer réseau, stockage, dashboard, ingress
+# 4. Installer HAProxy et Nexus
+# 5. Installer ArgoCD
+# 6. Déployer les applications ArgoCD
+# ============================================================
+
+
+# ------------------------------------------------------------
+# 1. Common configuration on all machines
+# ------------------------------------------------------------
+- name: Configure common system settings on all servers
+  hosts: all
+  become: true
+  roles:
+    - common
+  tags:
+    - common
+
+
+# ------------------------------------------------------------
+# 2. Prepare Kubernetes nodes
+# ------------------------------------------------------------
+- name: Prepare Kubernetes common requirements
+  hosts: k8s_cluster
+  become: true
+  roles:
+    - k8s_common
+  tags:
+    - k8s
+    - k8s_common
+
+
+# ------------------------------------------------------------
+# 3. Initialize Kubernetes control plane
+# ------------------------------------------------------------
+- name: Initialize Kubernetes control plane
+  hosts: k8s_control_plane
+  become: true
+  roles:
+    - k8s_control_plane
+  tags:
+    - k8s
+    - control_plane
+
+
+# ------------------------------------------------------------
+# 4. Generate temporary kubeadm join command
+# ------------------------------------------------------------
+- name: Generate Kubernetes join command
+  hosts: k8s_control_plane
+  become: true
+  tasks:
+    - name: Generate kubeadm join command with 2h TTL
+      ansible.builtin.command: kubeadm token create --ttl 2h --print-join-command
+      register: kubeadm_join_command_result
+      changed_when: false
+
+    - name: Store kubeadm join command in memory
+      ansible.builtin.set_fact:
+        kubeadm_join_command: "{{ kubeadm_join_command_result.stdout }}"
+  tags:
+    - k8s
+    - join_token
+
+
+# ------------------------------------------------------------
+# 5. Join workers to Kubernetes cluster
+# ------------------------------------------------------------
+- name: Join Kubernetes workers
+  hosts: k8s_workers
+  become: true
+  roles:
+    - k8s_workers
+  tags:
+    - k8s
+    - workers
+
+
+# ------------------------------------------------------------
+# 6. Label Kubernetes worker nodes
+# ------------------------------------------------------------
+- name: Label Kubernetes worker nodes
+  hosts: k8s_control_plane
+  become: false
+  roles:
+    - k8s_labels
+  tags:
+    - k8s
+    - labels
+
+
+# ------------------------------------------------------------
+# 7. Install Calico CNI
+# ------------------------------------------------------------
+- name: Install Calico CNI
+  hosts: k8s_control_plane
+  become: false
+  roles:
+    - calico
+  tags:
+    - k8s
+    - calico
+
+
+# ------------------------------------------------------------
+# 8. Configure NFS server
+# ------------------------------------------------------------
+- name: Configure NFS server
+  hosts: nfs
+  become: true
+  roles:
+    - nfs_server
+  tags:
+    - nfs
+    - nfs_server
+
+
+# ------------------------------------------------------------
+# 9. Configure NFS clients on Kubernetes nodes
+# ------------------------------------------------------------
+- name: Configure NFS clients on Kubernetes nodes
+  hosts: k8s_cluster
+  become: true
+  roles:
+    - nfs_clients
+  tags:
+    - nfs
+    - nfs_clients
+
+
+# ------------------------------------------------------------
+# 10. Install Helm on Kubernetes master
+# ------------------------------------------------------------
+- name: Install Helm
+  hosts: k8s_control_plane
+  become: true
+  roles:
+    - helm
+  tags:
+    - helm
+
+
+# ------------------------------------------------------------
+# 11. Install NFS dynamic provisioner
+# ------------------------------------------------------------
+- name: Install NFS dynamic provisioner
+  hosts: k8s_control_plane
+  become: false
+  roles:
+    - nfs_provisioner
+  tags:
+    - nfs
+    - nfs_provisioner
+    - storage
+
+
+# ------------------------------------------------------------
+# 12. Install Headlamp Kubernetes dashboard
+# ------------------------------------------------------------
+- name: Install Headlamp dashboard
+  hosts: k8s_control_plane
+  become: false
+  roles:
+    - dashboard
+  tags:
+    - dashboard
+    - headlamp
+
+
+# ------------------------------------------------------------
+# 13. Install Ingress NGINX controller
+# ------------------------------------------------------------
+- name: Install Ingress NGINX controller
+  hosts: k8s_control_plane
+  become: false
+  roles:
+    - ingress_controller
+  tags:
+    - ingress
+    - ingress_controller
+
+
+# ------------------------------------------------------------
+# 14. Configure Headlamp Ingress
+# ------------------------------------------------------------
+- name: Configure Headlamp Ingress
+  hosts: k8s_control_plane
+  become: false
+  roles:
+    - headlamp_ingress
+  tags:
+    - ingress
+    - headlamp_ingress
+
+
+# ------------------------------------------------------------
+# 15. Configure HAProxy load balancer
+# ------------------------------------------------------------
+- name: Configure HAProxy
+  hosts: loadbalancer
+  become: true
+  roles:
+    - haproxy
+  tags:
+    - haproxy
+    - loadbalancer
+
+
+# ------------------------------------------------------------
+# 16. Install Nexus Repository Manager
+# ------------------------------------------------------------
+- name: Install Nexus Repository Manager
+  hosts: nexus
+  become: true
+  roles:
+    - nexus
+  tags:
+    - nexus
+
+
+# ------------------------------------------------------------
+# 17. Install ArgoCD
+# ------------------------------------------------------------
+- name: Install ArgoCD on Kubernetes cluster
+  hosts: k8s_control_plane
+  become: false
+  roles:
+    - argocd
+  tags:
+    - argocd
+
+
+# ------------------------------------------------------------
+# 18. Configure ArgoCD applications
+# ------------------------------------------------------------
+- name: Configure ArgoCD applications
+  hosts: k8s_control_plane
+  become: false
+
+  vars_prompt:
+    - name: argocd_nexus_password
+      prompt: "Nexus admin password"
+      private: true
+
+  roles:
+    - argocd_apps
+
+  tags:
+    - argocd_apps
+    - apps
